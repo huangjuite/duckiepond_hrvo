@@ -1,0 +1,8 @@
+prefix=/home/ray/duckiepond_hrvo/catkin_ws/devel
+
+Name: hrvo
+Description: Description of hrvo
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/ray/duckiepond_hrvo/catkin_ws/devel/lib 
+Requires: 

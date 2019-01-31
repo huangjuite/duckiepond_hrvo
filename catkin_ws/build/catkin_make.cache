@@ -1,0 +1,2 @@
+hrvo
+-DCATKIN_DEVEL_PREFIX=/home/ray/duckiepond_hrvo/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/ray/duckiepond_hrvo/catkin_ws/install -G Unix Makefiles
