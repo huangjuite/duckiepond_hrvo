@@ -3,7 +3,11 @@
 import rospy
 from duckiepond_vehicle.msg import UsvDrive
 from sensor_msgs.msg import NavSatFix,Imu
+from nav_msgs.msg import Odometry
 from RVO import RVO_update, reach, compute_V_des, reach
+from PID import PID_control
+from dynamic_reconfigure.server import Server
+from control.cfg import ang_PIDConfig,dis_PIDConfig
 import tf
 
 class BoatHRVO(object):
@@ -11,50 +15,41 @@ class BoatHRVO(object):
         self.node_name = rospy.get_name()
         rospy.loginfo("[%s] Initializing" %self.node_name)
 
-        self.pub_v1 = rospy.Publisher("/duck1/cmd_drive",UsvDrive,queue_size=1)
-        self.sub_gps1 = rospy.Subscriber("/duck1/fix",NavSatFix,self.cb_gps1,queue_size=1)
-        self.sub_imu1 = rospy.Subscriber("/duck1/imu/data",Imu,self.cb_imu1,queue_size=1)
-        self.p1 = NavSatFix()
-        self.p1.longitude = 121.000261
-        self.p1.latitude = 24.788875
-        self.y1 = -2.356
+        self.dis_pid = [PID_control("distance_control%d" % i) for i in range(4)]
+        self.angu_pid = [PID_control("angular_control%d" % i) for i in range(4)]
+        self.dis_server = Server(dis_PIDConfig,self.cb_dis_pid,"distance_control")
+        self.ang_server = Server(ang_PIDConfig,self.cb_ang_pid,"angular_control")
 
-        self.pub_v2 = rospy.Publisher("/duck2/cmd_drive",UsvDrive,queue_size=1)
-        self.sub_gps2 = rospy.Subscriber("/duck2/fix",NavSatFix,self.cb_gps2,queue_size=1)
-        self.sub_imu2 = rospy.Subscriber("/duck2/imu/data",Imu,self.cb_imu2,queue_size=1)
-        self.p2 = NavSatFix()
-        self.p2.longitude = 121.000115
-        self.p2.latitude = 24.788875
-        self.y2 = -0.785
+        self.pub_v1 = rospy.Publisher("/boat1/cmd_drive",UsvDrive,queue_size=1)
+        self.sub_p3d1 = rospy.Subscriber("/boat1/p3d_odom",Odometry,self.cb_boat1_odom,queue_size=1)
 
-        self.pub_v3 = rospy.Publisher("/duck3/cmd_drive",UsvDrive,queue_size=1)
-        self.sub_gps3 = rospy.Subscriber("/duck3/fix",NavSatFix,self.cb_gps3,queue_size=1)
-        self.sub_imu3 = rospy.Subscriber("/duck3/imu/data",Imu,self.cb_imu3,queue_size=1)
-        self.p3 = NavSatFix()
-        self.p3.longitude = 121.000115
-        self.p3.latitude = 24.788741
-        self.y3 = 0.785
+        self.pub_v2 = rospy.Publisher("/boat2/cmd_drive",UsvDrive,queue_size=1)
+        self.sub_p3d1 = rospy.Subscriber("/boat2/p3d_odom",Odometry,self.cb_boat2_odom,queue_size=1)
 
-        self.pub_v4 = rospy.Publisher("/duck4/cmd_drive",UsvDrive,queue_size=1)
-        self.sub_gps4 = rospy.Subscriber("/duck4/fix",NavSatFix,self.cb_gps4,queue_size=1)
-        self.sub_imu4 = rospy.Subscriber("/duck4/imu/data",Imu,self.cb_imu4,queue_size=1)
-        self.p4 = NavSatFix()
-        self.p4.longitude = 121.000261
-        self.p4.latitude = 24.788741
-        self.y4 = 2.356
+        self.pub_v3 = rospy.Publisher("/boat3/cmd_drive",UsvDrive,queue_size=1)
+        self.sub_p3d1 = rospy.Subscriber("/boat3/p3d_odom",Odometry,self.cb_boat3_odom,queue_size=1)
+
+        self.pub_v4 = rospy.Publisher("/boat4/cmd_drive",UsvDrive,queue_size=1)
+        self.sub_p3d1 = rospy.Subscriber("/boat4/p3d_odom",Odometry,self.cb_boat4_odom,queue_size=1)
+
+        self.boat_odom = []
+        for i in range(4):
+            self.boat_odom.append(Odometry())
+
+        self.yaw = [[0] for i in range(4)]
 
         self.ws_model = dict()
         #robot radius
-        self.ws_model['robot_radius'] = 0.000015
+        self.ws_model['robot_radius'] = 1.5
         self.ws_model['circular_obstacles'] = []
         #rectangular boundary, format [
         #x,y,width/2,heigth/2]
         self.ws_model['boundary'] = [] 
 
-        self.pin1 = [121.000261,24.788875]
-        self.pin2 = [121.000115,24.788875]
-        self.pin3 = [121.000115,24.788741]
-        self.pin4 = [121.000261,24.788741]
+        self.pin1 = [7.5,7.5]
+        self.pin2 = [-7.5,7.5]
+        self.pin3 = [-7.5,-7.5]
+        self.pin4 = [7.5,-7.5]
         self.position = [self.pin1] + [self.pin2] + [self.pin3] + [self.pin4]
         self.goal = [self.pin3] + [self.pin4] + [self.pin1] + [self.pin2]
         #print(self.position)
@@ -66,51 +61,59 @@ class BoatHRVO(object):
 
         self.timer = rospy.Timer(rospy.Duration(0.2),self.cb_hrvo)
 
-    def cb_gps1(self,msg):
-        self.p1 = msg
 
-    def cb_gps2(self,msg):
-        self.p2 = msg
-
-    def cb_gps3(self,msg):
-        self.p3 = msg
-
-    def cb_gps4(self,msg):
-        self.p4 = msg
-    
-    def cb_imu1(self,msg):
-        q = (msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w)
-        self.y1 = tf.transformations.euler_from_quaternion(q)[2]
-
-    def cb_imu2(self,msg):
-        q = (msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w)
-        self.y2 = tf.transformations.euler_from_quaternion(q)[2]
-
-    def cb_imu3(self,msg):
-        q = (msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w)
-        self.y3 = tf.transformations.euler_from_quaternion(q)[2]
-
-    def cb_imu4(self,msg):
-        q = (msg.orientation.x, msg.orientation.y, msg.orientation.z, msg.orientation.w)
-        self.y4 = tf.transformations.euler_from_quaternion(q)[2]
-        
     def cb_hrvo(self,event):
-        self.position = [[self.p1.longitude,self.p1.latitude]] + [[self.p2.longitude,self.p2.latitude]] + [[self.p3.longitude,self.p3.latitude]] + [[self.p4.longitude,self.p4.latitude]]
+        self.pos_update()
         v_des = compute_V_des(self.position,self.goal,self.v_max)
         self.velocity = RVO_update(self.position,v_des,self.velocity,self.ws_model)
-        #print(self.position)
-        
-        self.yaw = [self.y1] + [self.y2] + [self.y3] + [self.y4]
-        #print(self.yaw)
+        #print("position",self.position)
+        #print("velocity",self.velocity)
 
+    def pos_update(self):
+        self.position = []
+        for i in range(4):
+            pos = [self.boat_odom[i].pose.pose.position.x,self.boat_odom[i].pose.pose.position.y]
+            self.position.append(pos)
+            quaternion = (self.boat_odom[i].pose.pose.orientation.x,
+                        self.boat_odom[i].pose.pose.orientation.y,
+                        self.boat_odom[i].pose.pose.orientation.z,
+                        self.boat_odom[i].pose.pose.orientation.w)
+            euler = tf.transformations.euler_from_quaternion(quaternion)
+            self.yaw[i] = euler[2]
 
+    def cb_boat1_odom(self,msg):
+        self.boat_odom[0] = msg
 
+    def cb_boat2_odom(self,msg):
+        self.boat_odom[1] = msg
+    
+    def cb_boat3_odom(self,msg):
+        self.boat_odom[2] = msg
 
+    def cb_boat4_odom(self,msg):
+        self.boat_odom[3] = msg
 
+    def cb_dis_pid(self,config,level):
+        print("distance: [Kp]: {Kp}   [Ki]: {Ki}   [Kd]: {Kd}\n".format(**config))
+        Kp = float("{Kp}".format(**config))
+        Ki = float("{Ki}".format(**config))
+        Kd = float("{Kd}".format(**config))
+        for i in range(4):
+            self.dis_pid[i].setKp(Kp)
+            self.dis_pid[i].setKi(Ki)
+            self.dis_pid[i].setKd(Kd)
+        return config
 
-
-
-
+    def cb_ang_pid(self,config,level):
+        print("angular: [Kp]: {Kp}   [Ki]: {Ki}   [Kd]: {Kd}\n".format(**config))
+        Kp = float("{Kp}".format(**config))
+        Ki = float("{Ki}".format(**config))
+        Kd = float("{Kd}".format(**config))
+        for i in range(4):
+            self.angu_pid[i].setKp(Kp)
+            self.angu_pid[i].setKi(Ki)
+            self.angu_pid[i].setKd(Kd)
+        return config
 
 
 if __name__ == "__main__":
