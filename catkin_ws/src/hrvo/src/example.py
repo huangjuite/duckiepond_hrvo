@@ -19,7 +19,7 @@ ws_model['circular_obstacles'] = [[-0.3, 2.5, 0.3], [1.5, 2.5, 0.3], [3.3, 2.5, 
 ws_model['boundary'] = [] 
 
 #------------------------------
-#initialization for robot 
+#initialization for robot
 # position of [x,y]
 X = [[-0.5+1.0*i, 0.0] for i in range(7)] + [[-0.5+1.0*i, 5.0] for i in range(7)]
 # velocity of [vx,vy]
