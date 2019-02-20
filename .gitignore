@@ -3,3 +3,4 @@
 catkin_ws/.catkin_workspace
 catkin_ws/devel
 catkin_ws/build
+snap*.png
