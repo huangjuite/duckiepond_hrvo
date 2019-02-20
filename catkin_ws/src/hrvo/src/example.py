@@ -12,22 +12,22 @@ ws_model = dict()
 ws_model['robot_radius'] = 0.2
 #circular obstacles, format [x,y,rad]
 # no obstacles
-#ws_model['circular_obstacles'] = []
+ws_model['circular_obstacles'] = []
 # with obstacles
-ws_model['circular_obstacles'] = [[-0.3, 2.5, 0.3], [1.5, 2.5, 0.3], [3.3, 2.5, 0.3], [5.1, 2.5, 0.3]]
+#ws_model['circular_obstacles'] = [[-0.3, 2.5, 0.3], [1.5, 2.5, 0.3], [3.3, 2.5, 0.3], [5.1, 2.5, 0.3]]
 #rectangular boundary, format [x,y,width/2,heigth/2]
 ws_model['boundary'] = [] 
 
 #------------------------------
 #initialization for robot
 # position of [x,y]
-X = [[-0.5+1.0*i, 0.0] for i in range(7)] + [[-0.5+1.0*i, 5.0] for i in range(7)]
+X = [[7.5,7.5],[-7.5,7.5],[-7.5,-7.5],[7.5,-7.5]]
 # velocity of [vx,vy]
 V = [[0,0] for i in xrange(len(X))]
 # maximal velocity norm
 V_max = [1.0 for i in xrange(len(X))]
 # goal of [x,y]
-goal = [[5.5-1.0*i, 5.0] for i in range(7)] + [[5.5-1.0*i, 0.0] for i in range(7)]
+goal = [[-7.5,-7.5],[7.5,-7.5],[7.5,7.5],[-7.5,7.5]]
 
 #------------------------------
 #simulation setup
