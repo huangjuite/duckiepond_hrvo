@@ -55,6 +55,8 @@ while t*step < total_time:
         visualize_traj_dynamic(ws_model, X, V, goal, time=t*step, name='data/snap%s.png'%str(t/10))
         print ("output result ",t/10)
         img = cv2.imread("data/snap%s.png"%str(t/10))
+        heigth , width , _ = img.shape
+        img = cv2.resize(img,(width/2,heigth/2))
         cv2.imshow("hrvo_demo",img)
         cv2.waitKey(1)
     t += 1
