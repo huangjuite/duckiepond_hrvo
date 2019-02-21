@@ -9,25 +9,25 @@ from vis import visualize_traj_dynamic
 #define workspace model
 ws_model = dict()
 #robot radius
-ws_model['robot_radius'] = 1
+ws_model['robot_radius'] = 0.3
 #circular obstacles, format [x,y,rad]
 # no obstacles
 ws_model['circular_obstacles'] = []
 # with obstacles
 #ws_model['circular_obstacles'] = [[-0.3, 2.5, 0.3], [1.5, 2.5, 0.3], [3.3, 2.5, 0.3], [5.1, 2.5, 0.3]]
 #rectangular boundary, format [x,y,width/2,heigth/2]
-ws_model['boundary'] = [-10,10,10,10] 
+ws_model['boundary'] = [] 
 
 #------------------------------
 #initialization for robot
 # position of [x,y]
-X = [[7.5,7.5],[-7.5,7.5],[-7.5,-7.5],[7.5,-7.5]]
+X = [[5,5],[5,0],[0,0],[0,5]]
 # velocity of [vx,vy]
 V = [[0,0] for i in xrange(len(X))]
 # maximal velocity norm
-V_max = [5.0 for i in xrange(len(X))]
+V_max = [1 for i in xrange(len(X))]
 # goal of [x,y]
-goal = [[-7.5,-7.5],[7.5,-7.5],[7.5,7.5],[-7.5,7.5]]
+goal = [[0,0],[0,5],[5,5],[5,0]]
 
 #------------------------------
 #simulation setup
