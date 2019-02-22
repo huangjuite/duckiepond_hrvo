@@ -1,6 +1,4 @@
 import sys
-
-
 from RVO import RVO_update, reach, compute_V_des, reach
 from vis import visualize_traj_dynamic
 import cv2
